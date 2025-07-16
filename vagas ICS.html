@@ -1,0 +1,429 @@
+<!-- Arquivo: estacionamento.html -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Estacionamento</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f8f9fa;
+      color: #212529;
+    }
+
+    h1, h3 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .vagas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .vaga {
+      border: 2px dashed #ccc;
+      height: 70px;
+      border-radius: 12px;
+      background-color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 0.3rem;
+      transition: background 0.2s, border 0.2s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .vaga.ocupada {
+      background-color: #d4edda;
+      border-color: #28a745;
+    }
+
+    .vaga.reservada {
+      background-color: orange;
+      border-color: #ff9900;
+    }
+
+    .vaga.bloqueada {
+      background-color: #ff4d4d;
+      border-color: #cc0000;
+      color: white;
+    }
+
+    .placas-disponiveis {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .placa {
+      background-color: #dee2e6;
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+
+    .placa:hover {
+      background-color: #adb5bd;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 1rem 0;
+    }
+
+    ul li {
+      padding: 0.5rem;
+      margin: 0.2rem 0;
+      background: #ffffff;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .botao {
+      display: block;
+      width: 100%;
+      margin: 0.3rem 0;
+      padding: 0.8rem;
+      font-size: 1rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .botao:hover {
+      background-color: #0056b3;
+    }
+
+    #modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: none;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    #modal .conteudo {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      width: 95%;
+      max-width: 400px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    label, input {
+      display: block;
+      width: 100%;
+      margin-bottom: 0.6rem;
+      font-size: 0.95rem;
+    }
+
+    input {
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    #veiculosContainer > div {
+      margin-bottom: 0.8rem;
+      background: #f1f3f5;
+      padding: 0.6rem;
+      border-radius: 8px;
+    }
+
+    #veiculosContainer button {
+      margin-top: 0.3rem;
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    #veiculosContainer button:hover {
+      background: #c82333;
+    }
+
+    .ordenacao-info {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #495057;
+      margin: -0.5rem 0 0.5rem 0;
+      font-style: italic;
+    }
+
+    .icone {
+      margin-left: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <h1>Controle de Estacionamento</h1>
+  <p class="ordenacao-info">RUA SANTO ANTONIO 400, 3211-1111 CEP:80230-120</p>
+  <div class="vagas" id="vagasContainer"></div>
+
+  <h3>Placas Disponíveis</h3>
+  <div class="placas-disponiveis" id="placasDisponiveis"></div>
+
+  <h3>Motoristas que ainda não estacionaram</h3>
+  <ul id="motoristasPendentes"></ul>
+
+  <h3>MOTORISTAS CADASTRADOS</h3>
+  <ul id="listaVeiculos"></ul>
+
+  <button class="botao" onclick="abrirModal()">Cadastrar Motorista</button>
+  <button class="botao" onclick="limparVagas()">Limpar Vagas</button>
+  <button class="botao" onclick="exportarJson()">Exportar JSON</button>
+  <input type="file" id="importarInput" style="display:none" onchange="importarJson(event)">
+  <button class="botao" onclick="document.getElementById('importarInput').click()">Importar JSON</button>
+  <button class="botao" onclick="limparBanco()">Limpar IndexedDB</button>
+
+  <div id="modal">
+    <div class="conteudo">
+      <h3>Cadastro de Motorista</h3>
+      <label>Nome: <input type="text" id="nomeMotorista"></label>
+      <div id="veiculosContainer"></div>
+      <button onclick="adicionarVeiculo()">Adicionar Veículo</button>
+      <div style="margin-top:10px;">
+        <button onclick="salvarMotorista()">Salvar</button>
+        <button onclick="fecharModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+let motoristas = [];
+let vagas = Array(16).fill(null);
+let editarIndex = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+  carregarIndexedDB();
+  renderizar();
+});
+
+function renderizar() {
+  renderizarVagas();
+
+  const placasEl = document.getElementById("placasDisponiveis");
+  placasEl.innerHTML = "";
+  let placasDisponiveis = [];
+  motoristas.forEach(m => {
+    if (!vagas.some(v => v && v.nome === m.nome)) {
+      m.veiculos.forEach(v => {
+        if (!vagas.some(oc => oc && oc.placa === v.placa)) {
+          placasDisponiveis.push({ placa: v.placa, motorista: m, veiculo: v });
+        }
+      });
+    }
+  });
+  placasDisponiveis.sort((a, b) => a.placa.localeCompare(b.placa));
+  placasDisponiveis.forEach(item => {
+    const p = document.createElement("div");
+    p.className = "placa";
+    p.innerText = item.placa;
+    p.onclick = () => ocuparVaga(item.motorista, item.veiculo);
+    placasEl.appendChild(p);
+  });
+
+  const pendentes = document.getElementById("motoristasPendentes");
+  pendentes.innerHTML = "";
+  motoristas.filter(m => !vagas.some(v => v && v.nome === m.nome))
+    .sort((a, b) => a.nome.localeCompare(b.nome))
+    .forEach(m => {
+      const li = document.createElement("li");
+      li.innerText = `${m.nome}: ${m.veiculos.map(v => v.placa).join(", ")}`;
+      pendentes.appendChild(li);
+    });
+
+  const lista = document.getElementById("listaVeiculos");
+  lista.innerHTML = "";
+  const todos = [];
+  motoristas.forEach(m => m.veiculos.forEach(v => todos.push({ ...v, nome: m.nome })));
+  todos.sort((a, b) => a.placa.localeCompare(b.placa)).forEach(v => {
+    const li = document.createElement("li");
+    li.innerHTML = `${v.placa} - ${v.modelo} (${v.cor}) - ${v.nome}` +
+      ` <span class='icone' onclick='editarMotorista("${v.nome}")'>✎</span>` +
+      ` <span class='icone' onclick='excluirMotorista("${v.nome}")'>&#10006;</span>`;
+    lista.appendChild(li);
+  });
+
+  const qtd = new Set(motoristas.map(m => m.nome)).size;
+  document.querySelector("h3:nth-of-type(3)").innerHTML =
+    `Motoristas cadastrados <span style="font-size:0.8em">(${qtd})</span>`;
+}
+
+function renderizarVagas() {
+  const vagasEl = document.getElementById("vagasContainer");
+  vagasEl.innerHTML = "";
+  vagas.forEach((ocupante, i) => {
+    const el = document.createElement("div");
+    el.className = "vaga";
+    if (ocupante) el.classList.add("ocupada");
+    if (ocupante?.status === "reservada") el.classList.add("reservada");
+    if (ocupante?.status === "bloqueada") el.classList.add("bloqueada");
+    el.innerText = ocupante && ocupante.placa ? `${ocupante.nome}\n${ocupante.placa}` : "Vaga Livre";
+
+    let pressTimer;
+    el.addEventListener("touchstart", () => {
+      pressTimer = setTimeout(() => {
+        const status = prompt("Escolha: 'vermelho' para bloquear ou 'laranja' para reservar");
+        if (status === "vermelho") vagas[i] = { nome: "", placa: "", status: "bloqueada" };
+        else if (status === "laranja") vagas[i] = { nome: "", placa: "", status: "reservada" };
+        salvarIndexedDB();
+        renderizar();
+      }, 2000);
+    });
+    el.addEventListener("touchend", () => clearTimeout(pressTimer));
+    el.onclick = () => removerVaga(i);
+
+    vagasEl.appendChild(el);
+  });
+}
+
+function ocuparVaga(motorista, veiculo) {
+  const idx = vagas.findIndex(v => v === null);
+  if (idx >= 0) {
+    vagas[idx] = { nome: motorista.nome, placa: veiculo.placa };
+    salvarIndexedDB();
+    renderizar();
+  }
+}
+
+function removerVaga(index) {
+  vagas[index] = null;
+  salvarIndexedDB();
+  renderizar();
+}
+
+function abrirModal(nome = "", veiculos = []) {
+  editarIndex = nome ? motoristas.findIndex(m => m.nome === nome) : null;
+  document.getElementById("nomeMotorista").value = nome;
+  const container = document.getElementById("veiculosContainer");
+  container.innerHTML = "";
+  veiculos.forEach(v => {
+    const div = document.createElement("div");
+    div.innerHTML = `Modelo: <input value="${v.modelo}"> Placa: <input value="${v.placa}"> Cor: <input value="${v.cor}"> <button onclick="this.parentElement.remove()">Remover</button>`;
+    container.appendChild(div);
+  });
+  document.getElementById("modal").style.display = "flex";
+}
+
+function adicionarVeiculo() {
+  const container = document.getElementById("veiculosContainer");
+  const div = document.createElement("div");
+  div.innerHTML = `Modelo: <input> Placa: <input> Cor: <input> <button onclick="this.parentElement.remove()">Remover</button>`;
+  container.appendChild(div);
+}
+
+function salvarMotorista() {
+  const nome = document.getElementById("nomeMotorista").value.trim();
+  const veiculos = Array.from(document.querySelectorAll("#veiculosContainer > div")).map(div => {
+    const inputs = div.querySelectorAll("input");
+    return { modelo: inputs[0].value, placa: inputs[1].value.toUpperCase(), cor: inputs[2].value };
+  });
+  if (editarIndex != null) motoristas.splice(editarIndex, 1);
+  motoristas.push({ nome, veiculos });
+  fecharModal();
+  salvarIndexedDB();
+  renderizar();
+}
+
+function editarMotorista(nome) {
+  const motorista = motoristas.find(m => m.nome === nome);
+  abrirModal(motorista.nome, motorista.veiculos);
+}
+
+function excluirMotorista(nome) {
+  if (confirm("Deseja excluir este motorista e todos os seus veículos?")) {
+    motoristas = motoristas.filter(m => m.nome !== nome);
+    vagas = vagas.map(v => v && v.nome === nome ? null : v);
+    salvarIndexedDB();
+    renderizar();
+  }
+}
+
+function fecharModal() {
+  document.getElementById("modal").style.display = "none";
+}
+
+function limparVagas() {
+  vagas = Array(16).fill(null);
+  salvarIndexedDB();
+  renderizar();
+}
+
+function salvarIndexedDB() {
+  const db = { motoristas, vagas };
+  localStorage.setItem("estacionamento", JSON.stringify(db));
+}
+
+function carregarIndexedDB() {
+  const db = JSON.parse(localStorage.getItem("estacionamento"));
+  if (db) {
+    motoristas = db.motoristas || [];
+    vagas = db.vagas || Array(16).fill(null);
+  }
+}
+
+function exportarJson() {
+  const data = JSON.stringify({ motoristas, vagas });
+  const blob = new Blob([data], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "estacionamento.json";
+  a.click();
+}
+
+function importarJson(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const db = JSON.parse(e.target.result);
+    motoristas = db.motoristas || [];
+    vagas = db.vagas || Array(16).fill(null);
+    salvarIndexedDB();
+    renderizar();
+  };
+  reader.readAsText(file);
+}
+
+function limparBanco() {
+  if (confirm("Deseja limpar todos os dados do banco?")) {
+    localStorage.removeItem("estacionamento");
+    motoristas = [];
+    vagas = Array(16).fill(null);
+    renderizar();
+  }
+}
+</script>
+</body>
+</html>
